@@ -1,0 +1,30 @@
+{
+  "name": "rawimages-thumbnailer",
+  "version": "1.0.0",
+  "description": "AWS Lambda handler for resizing images uploaded to S3",
+  "main": "CreateThumbnail.js",
+  "dependencies": {
+    "async": "^0.9.0",
+    "gm": "^1.17.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/justasitsounds/rawimages-thumbaniler"
+  },
+  "keywords": [
+    "AWS",
+    "Lambda",
+    "thumbnails",
+    "resizing"
+  ],
+  "author": "http://github.com/justasitsounds",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/justasitsounds/rawimages-thumbaniler/issues"
+  },
+  "homepage": "https://github.com/justasitsounds/rawimages-thumbaniler"
+}
