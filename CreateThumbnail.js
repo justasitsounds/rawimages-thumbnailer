@@ -5,12 +5,21 @@ var gm = require('gm')
             .subClass({ imageMagick: true }); // Enable ImageMagick integration.
 var util = require('util');
 
-// constants
-var MAX_WIDTH  = 100;
-var MAX_HEIGHT = 100;
+// resize map - based on upload path
+var resizeOpts = {
+	panorama : {
+		MAX_WIDTH : 1880,
+		MAX_HEIGHT : 360
+	},
+	fourxthree : {
+		MAX_WIDTH : 560,
+		MAX_HEIGHT : 560
+	}
+};
 
 // get reference to S3 client
-var s3 = new AWS.S3();
+var s3get = new AWS.S3();
+var s3put = new AWS.S3({ region:"ap-southeast-2"});
 
 exports.handler = function(event, context) {
 	// Read options from the event.
@@ -19,8 +28,14 @@ exports.handler = function(event, context) {
 	// Object key may have spaces or unicode non-ASCII characters.
     var srcKey    =
     decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
-	var dstBucket = "http://s3-ap-southeast-2.amazonaws.com/images.jamesprenderga.st";
-	var dstKey    = "resized-" + srcKey;
+var imageType = srcKey.match(/(^panorama|^fourxthree).*/);
+if(!imageType){
+	console.error("source file '%s' not in a recognised source directory", srcKey);
+	return;
+}
+
+var dstBucket = "images.jamesprenderga.st";
+var dstKey    = "resized-" + srcKey;
 
 	// Sanity check: validate that source and destination are different buckets.
 	if (srcBucket == dstBucket) {
@@ -44,7 +59,7 @@ exports.handler = function(event, context) {
 	async.waterfall([
 		function download(next) {
 			// Download the image from S3 into a buffer.
-			s3.getObject({
+			s3get.getObject({
 					Bucket: srcBucket,
 					Key: srcKey
 				},
@@ -54,14 +69,15 @@ exports.handler = function(event, context) {
 			gm(response.Body).size(function(err, size) {
 				// Infer the scaling factor to avoid stretching the image unnaturally.
 				var scalingFactor = Math.min(
-					MAX_WIDTH / size.width,
-					MAX_HEIGHT / size.height
+					resizeOpts[imageType].MAX_WIDTH / size.width,
+					resizeOpts[imageType].MAX_HEIGHT / size.height
 				);
 				var width  = scalingFactor * size.width;
 				var height = scalingFactor * size.height;
 
 				// Transform the image buffer in memory.
-				this.resize(width, height)
+				this.resample(72,72)
+					.resize(width, height)
 					.toBuffer(imageType, function(err, buffer) {
 						if (err) {
 							next(err);
@@ -73,7 +89,7 @@ exports.handler = function(event, context) {
 		},
 		function upload(contentType, data, next) {
 			// Stream the transformed image to a different S3 bucket.
-			s3.putObject({
+			s3put.putObject({
 					Bucket: dstBucket,
 					Key: dstKey,
 					Body: data,
