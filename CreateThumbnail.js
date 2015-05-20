@@ -28,11 +28,13 @@ exports.handler = function(event, context) {
 	// Object key may have spaces or unicode non-ASCII characters.
     var srcKey    =
     decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, " "));
-var imageType = srcKey.match(/(^panorama|^fourxthree).*/);
-if(!imageType){
+var layoutExpr = srcKey.match(/(^panorama|^fourxthree).*/);
+if(!layoutExpr){
 	console.error("source file '%s' not in a recognised source directory", srcKey);
 	return;
 }
+
+var layoutType = layoutExpr[1];
 
 var dstBucket = "images.jamesprenderga.st";
 var dstKey    = "resized-" + srcKey;
@@ -68,9 +70,10 @@ var dstKey    = "resized-" + srcKey;
 		function tranform(response, next) {
 			gm(response.Body).size(function(err, size) {
 				// Infer the scaling factor to avoid stretching the image unnaturally.
+				console.log('resizeOpts',resizeOpts);
 				var scalingFactor = Math.min(
-					resizeOpts[imageType].MAX_WIDTH / size.width,
-					resizeOpts[imageType].MAX_HEIGHT / size.height
+					resizeOpts[layoutType].MAX_WIDTH / size.width,
+					resizeOpts[layoutType].MAX_HEIGHT / size.height
 				);
 				var width  = scalingFactor * size.width;
 				var height = scalingFactor * size.height;
